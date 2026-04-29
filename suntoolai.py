@@ -1,9 +1,12 @@
 import streamlit as st
 import random
 
-st.title("🌟 SUNTOOL by mhwuan")
+st.set_page_config(layout="wide")
 
-balance = st.number_input("💰 Balance", value=1000000, step=50000)
-history_input = st.text_input("📜 History (Tài,Xỉu,...)", "Tài,Xỉu,Tài")
+# Title
+st.markdown("<h1 style='text-align: center; color: #ff4757;'>🌟 <b>SUNTOOL</b> by mhwuan</h1>", unsafe_allow_html=True)
 
-history
+# Sidebar login
+with st.sidebar:
+    st.header("🔐 Login")
+    username
