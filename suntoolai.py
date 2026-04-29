@@ -4,13 +4,29 @@ import hashlib
 
 st.set_page_config(layout="wide", page_title="🌟 SunTool by mhwuan")
 
-# Session state
-if 'user' not in st.session_state:
-    st.session_state.user = None
-    st.session_state.balance = 1000000
-    st.session_state.wins = 0
-    st.session_state.games = 0
-    st.session_state.history = []
+# Data storage
+if 'users' not in st.session_state:
+    st.session_state.users = {'admin': hashlib.md5('admin123'.encode()).hexdigest()}
+if 'user_stats' not in st.session_state:
+    st.session_state.user_stats = {}
+if 'current_user' not in st.session_state:
+    st.session_state.current_user = None
+
+def register_user(username, password):
+    if username in st.session_state.users:
+        return False, "❌ Username đã tồn tại!"
+    st.session_state.users[username] = hashlib.md5(password.encode()).hexdigest()
+    st.session_state.user_stats[username] = {
+        'balance': 1000000, 'wins': 0, 'games': 0, 'history': []
+    }
+    return True, f"✅ Đăng ký **{username}** thành công!"
+
+def login_user(username, password):
+    pwd_hash = hashlib.md5(password.encode()).hexdigest()
+    if username in st.session_state.users and st.session_state.users[username] == pwd_hash:
+        st.session_state.current_user = username
+        return True, f"✅ Đăng nhập **{username}** thành công!"
+    return False, "❌ Sai username hoặc password!"
 
 st.markdown("""
 <style>
@@ -20,71 +36,88 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# LOGIN PAGE
-if not st.session_state.user:
+# === LOGIN / REGISTER ===
+if not st.session_state.current_user:
     st.markdown('<div class="header"><h1 style="font-size: 3.5rem;">🌟 SUNTOOL</h1><p style="font-size: 1.5rem;">Tài Xỉu AI Pro by mhwuan 🔥</p></div>', unsafe_allow_html=True)
     
-    # Login form
-    username = st.text_input("👤 Username", key="login_user")
-    password = st.text_input("🔒 Password", type="password", key="login_pass")
+    tab1, tab2 = st.tabs(["🔐 **Đăng nhập**", "📝 **Đăng ký**"])
     
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        if st.button("🚀 Đăng nhập", use_container_width=True, key="login_btn"):
-            # Simple auth
-            if username and password:
-                st.session_state.user = username
-                st.success(f"✅ Đăng nhập thành công {username}!")
+    # TAB 1: LOGIN
+    with tab1:
+        col1, col2 = st.columns(2)
+        with col1:
+            username = st.text_input("👤 Username", key="login_username")
+        with col2:
+            password = st.text_input("🔒 Password", type="password", key="login_password")
+        
+        if st.button("🚀 **Đăng nhập**", use_container_width=True, key="login_button"):
+            success, message = login_user(username, password)
+            if success:
+                st.success(message)
                 st.rerun()
+            else:
+                st.error(message)
+        
+        st.info("🔑 **Admin**: `admin` / `admin123`")
     
-    with col2:
-        st.info("🔑 **Admin**: admin / admin123")
-        st.info("👤 **User**: bất kỳ / bất kỳ")
-    
-    st.markdown("---")
+    # TAB 2: REGISTER
+    with tab2:
+        col1, col2 = st.columns(2)
+        with col1:
+            new_username = st.text_input("👤 Username mới", key="reg_username")
+        with col2:
+            new_password = st.text_input("🔒 Password mới", type="password", key="reg_password")
+        
+        if st.button("✅ **Đăng ký**", use_container_width=True, key="register_button"):
+            success, message = register_user(new_username, new_password)
+            if success:
+                st.success(message)
+            else:
+                st.error(message)
 
 else:
-    # MAIN APP
+    # === MAIN APP ===
+    stats = st.session_state.user_stats[st.session_state.current_user]
+    
     # Header
     col1, col2, col3 = st.columns([1, 3, 1])
     with col1: st.empty()
-    with col2: st.markdown(f"### 👋 Chào **{st.session_state.user}** | by mhwuan")
+    with col2: st.markdown(f"### 👋 **{st.session_state.current_user}** | by mhwuan")
     with col3:
-        if st.button("🚪 Logout", key="logout_btn"):
-            st.session_state.user = None
-            st.session_state.history = []
+        if st.button("🚪 **Logout**", key="logout_btn"):
+            st.session_state.current_user = None
             st.rerun()
     
     # DASHBOARD
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.markdown('<div class="metric-card"><h3>💰 Balance</h3><h1 style="color:#00b894;">{:,}</h1></div>'.format(st.session_state.balance), unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card"><h3>💰 Balance</h3><h1 style="color:#00b894;">{stats["balance"]:,}</h1></div>', unsafe_allow_html=True)
     with col2:
-        winrate = st.session_state.wins / max(st.session_state.games, 1) * 100
+        winrate = stats["wins"] / max(stats["games"], 1) * 100
         st.markdown(f'<div class="metric-card"><h3>📈 Winrate</h3><h1 style="color:#00b894;">{winrate:.0f}%</h1></div>', unsafe_allow_html=True)
     with col3:
-        st.markdown(f'<div class="metric-card"><h3>🏆 Wins</h3><h1 style="color:#00b894;">{st.session_state.wins}</h1></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card"><h3>🏆 Wins</h3><h1 style="color:#00b894;">{stats["wins"]}</h1></div>', unsafe_allow_html=True)
     with col4:
-        st.markdown(f'<div class="metric-card"><h3>📊 Games</h3><h1 style="color:#00b894;">{st.session_state.games}</h1></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card"><h3>📊 Games</h3><h1 style="color:#00b894;">{stats["games"]}</h1></div>', unsafe_allow_html=True)
     
     # CONTROLS
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("🔗 Mở SunWin.MW", key="sunwin_btn"):
+        if st.button("🔗 **Mở SunWin.MW**", key="sunwin_open"):
             st.balloons()
-            st.success("🌐 https://sunwin.mw/taixiu đã mở!")
+            st.success("🌐 https://sunwin.mw/taixiu")
         
-        result = st.selectbox("➕ Kết quả ván vừa", ["Chọn...", "Tài", "Xỉu"], key="result_select")
-        if st.button("✅ Thêm kết quả", key="add_result") and result != "Chọn...":
-            st.session_state.history.append(result)
-            st.session_state.games += 1
-            st.success(f"✅ Đã thêm **{result}**!")
-            st.rerun()
+        result = st.selectbox("➕ **Kết quả ván**", ["Chọn...", "Tài", "Xỉu"], key="game_result")
+        if st.button("✅ **Thêm kết quả**", key="add_game"):
+            if result != "Chọn...":
+                stats["history"].append(result)
+                stats["games"] += 1
+                st.success(f"✅ Thêm **{result}**!")
+                st.rerun()
     
     with col2:
-        if len(st.session_state.history) >= 3:
-            # AI Predict
-            recent = st.session_state.history[-5:]
+        if len(stats["history"]) >= 3:
+            recent = stats["history"][-5:]
             tai_count = sum(1 for r in recent if r == "Tài")
             pred = "Xỉu" if tai_count >= 3 else "Tài"
             conf = 80 + random.randint(0, 15)
@@ -92,54 +125,62 @@ else:
             st.markdown(f"""
             <div class="ai-card">
                 <h2 style="font-size: 2.5rem;">🎯 **VÁN SAU → {pred}**</h2>
-                <h3>🤖 Độ chính xác: **{conf}%**</h3>
-                <p>AI Pro Pattern Analysis</p>
+                <h3>🤖 **{conf}%** AI Pro</h3>
             </div>
             """, unsafe_allow_html=True)
             
-            if st.button(f"🎲 Test Bet **{pred}** ({conf}%)", use_container_width=True, key="test_bet"):
+            if st.button(f"🎲 **Test {pred}** ({conf}%)", use_container_width=True, key="test_bet_btn"):
                 bet = 50000
-                win_chance = conf / 100.0
-                if random.random() < win_chance:
+                if random.random() < (conf / 100):
                     profit = int(bet * 1.95)
-                    st.session_state.balance += profit
-                    st.session_state.wins += 1
-                    st.success(f"✅ **WIN!** +{profit:,} VNĐ | Balance: {st.session_state.balance:,}")
+                    stats["balance"] += profit
+                    stats["wins"] += 1
+                    st.success(f"✅ **WIN +{profit:,}!** 💰")
                     st.balloons()
                 else:
-                    st.session_state.balance -= bet
-                    st.error(f"❌ **LOSE!** -{bet:,} VNĐ | Balance: {st.session_state.balance:,}")
+                    stats["balance"] -= bet
+                    st.error(f"❌ **LOSE -{bet:,}!** 😢")
                 st.rerun()
         else:
-            st.warning("⏳ **Cần 3+ ván** để AI dự đoán chính xác!")
+            st.warning("⏳ **Cần 3+ ván** để AI dự đoán!")
     
     # HISTORY
-    st.subheader("📜 **15 ván gần nhất**")
-    recent_history = st.session_state.history[-15:]
+    st.subheader("📜 **Lịch sử 15 ván gần nhất**")
+    recent_history = stats["history"][-15:]
     if recent_history:
         for i, result in enumerate(recent_history, 1):
             st.write(f"**{i:2d}.** {result}")
     else:
-        st.info("📭 Chưa có dữ liệu - Nhập kết quả từ SunWin.MW!")
+        st.info("📭 **Chưa có dữ liệu** - Nhập từ SunWin.MW!")
     
-    # ADMIN CHECK
-    if st.session_state.user == "admin":
-        with st.expander("🔧 **ADMIN PANEL**", expanded=False):
-            st.success("👑 **ADMIN MODE ACTIVE**")
-            st.metric("📊 Tổng người dùng", "1 (Demo)")
-            if st.button("🗑️ Reset All Data", key="admin_reset"):
-                st.session_state.balance = 1000000
-                st.session_state.wins = 0
-                st.session_state.games = 0
-                st.session_state.history = []
-                st.success("✅ Đã reset!")
-                st.rerun()
+    # ADMIN PANEL
+    if st.session_state.current_user == "admin":
+        with st.expander("🔧 **ADMIN PANEL** - Quản lý users", expanded=False):
+            st.success("👑 **ADMIN MODE**")
+            
+            # User list
+            if st.session_state.users:
+                st.write("**👥 Danh sách users:**")
+                for user in list(st.session_state.users.keys())[1:]:  # Skip admin
+                    if user in st.session_state.user_stats:
+                        u_stats = st.session_state.user_stats[user]
+                        st.write(f"• **{user}**: Balance {u_stats['balance']:,} | Wins {u_stats['wins']}")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🗑️ **Reset my data**", key="admin_reset"):
+                    stats["balance"] = 1000000
+                    stats["wins"] = 0
+                    stats["games"] = 0
+                    stats["history"] = []
+                    st.success("✅ **Reset thành công!**")
+                    st.rerun()
     
     # FOOTER
     st.markdown("---")
     st.markdown("""
     <div style='text-align: center; color: #666; padding: 2rem;'>
-        <h3>🌟 **SUNTOOL** - AI Tài Xỉu Siêu Chuẩn</h3>
-        <p>🤖 Dự đoán 95%+ | <strong>by mhwuan</strong> 🚀</p>
+        <h3>🌟 **SUNTOOL** - AI Tài Xỉu 95%+</h3>
+        <p>🤖 Dự đoán realtime | <strong>by mhwuan</strong> 🚀</p>
     </div>
     """, unsafe_allow_html=True)
