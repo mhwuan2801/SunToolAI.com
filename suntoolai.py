@@ -1,8 +1,9 @@
 import streamlit as st
 import random
 
-st.set_page_config(layout="wide", page_title="🌟 SunTool")
+st.set_page_config(layout="wide")
 
-# State - SAFE
-if 'app_data' not in st.session_state:
-    st.session_state.app_data
+st.markdown("""
+<style>
+.header {background: linear-gradient(135deg, #667eea, #764ba2); padding: 2rem; color: white; border-radius: 20px; text-align: center;}
+.ai {background
